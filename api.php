@@ -113,8 +113,14 @@ if ($action === 'create_job') {
 
     // Disparar worker em segundo plano de forma totalmente assíncrona e desanexada
     $workerPath = __DIR__ . '/worker.php';
-    $phpBin = (defined('PHP_BINARY') && is_executable(PHP_BINARY)) ? PHP_BINARY : '/usr/bin/php';
-    $cmd = sprintf("%s %s %s > /dev/null 2>&1 &", escapeshellarg($phpBin), escapeshellarg($workerPath), escapeshellarg($jobId));
+    function findPhpCli() {
+        foreach (['/usr/bin/php', '/usr/bin/php8.4', '/usr/bin/php8.3', '/usr/local/bin/php'] as $c) {
+            if (file_exists($c) && is_executable($c)) return $c;
+        }
+        return 'php';
+    }
+    $phpBin = findPhpCli();
+    $cmd = sprintf("nohup %s %s %s > /dev/null 2>&1 &", escapeshellarg($phpBin), escapeshellarg($workerPath), escapeshellarg($jobId));
     exec($cmd);
 
     echo json_encode([

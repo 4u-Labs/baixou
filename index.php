@@ -913,7 +913,11 @@
 
                     const job = data.job;
 
-                    if (job.status === 'analyzing') {
+                    btnSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processando Mídia...';
+
+                    if (job.status === 'pending') {
+                        updateSteps(1, 10, job.step || 'Aguardando na fila de processamento...');
+                    } else if (job.status === 'analyzing') {
                         updateSteps(1, job.progress || 20, job.step);
                     } else if (job.status === 'downloading') {
                         updateSteps(2, job.progress || 40, job.step);

@@ -78,7 +78,7 @@ $cookiesOpt = (file_exists($cookiesFile) && filesize($cookiesFile) > 10) ? ' --c
 
 // Obter metadados via yt-dlp dump-json
 $cmdInfo = sprintf(
-    'PATH=%s:$PATH %s --dump-json --no-warnings --no-playlist%s --extractor-args "youtube:player_client=android,web" %s 2>&1',
+    'PATH=%s:$PATH %s --dump-json --no-warnings --no-playlist%s --remote-components ejs:github --extractor-args "youtube:player_client=android,web" %s 2>&1',
     escapeshellarg($ffmpegDir),
     escapeshellarg($binYtDlp),
     $cookiesOpt,
@@ -125,7 +125,7 @@ $outPattern = "$jobDir/media.%(ext)s";
 // Montar comando de download e conversão
 if ($format === 'mp3') {
     $dlCmd = sprintf(
-        'PATH=%s:$PATH %s -x --audio-format mp3 --audio-quality 0 --ffmpeg-location %s --no-playlist%s --extractor-args "youtube:player_client=android,web" -o %s %s 2>&1',
+        'PATH=%s:$PATH %s -x --audio-format mp3 --audio-quality 0 --ffmpeg-location %s --no-playlist%s --remote-components ejs:github --extractor-args "youtube:player_client=android,web" -o %s %s 2>&1',
         escapeshellarg($ffmpegDir),
         escapeshellarg($binYtDlp),
         escapeshellarg($binFfmpeg),
@@ -146,7 +146,7 @@ if ($format === 'mp3') {
     }
 
     $dlCmd = sprintf(
-        'PATH=%s:$PATH %s -f %s --merge-output-format mp4 --ffmpeg-location %s --no-playlist%s --extractor-args "youtube:player_client=android,web" -o %s %s 2>&1',
+        'PATH=%s:$PATH %s -f %s --merge-output-format mp4 --ffmpeg-location %s --no-playlist%s --remote-components ejs:github --extractor-args "youtube:player_client=android,web" -o %s %s 2>&1',
         escapeshellarg($ffmpegDir),
         escapeshellarg($binYtDlp),
         escapeshellarg($formatSelector),
