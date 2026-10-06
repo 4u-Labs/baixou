@@ -1,0 +1,5 @@
+/storage/downloads/*
+!/storage/downloads/.gitkeep
+/storage/data/*.sqlite*
+/storage/data/*.txt
+!/storage/data/.gitkeep
