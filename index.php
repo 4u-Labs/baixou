@@ -1,10 +1,13 @@
+<?php
+require_once __DIR__ . '/i18n.php';
+?>
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="<?= $currentLang === 'pt' ? 'pt-BR' : 'en' ?>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BAIXOU!! — Baixe e converta vídeos autorizados em MP4 e MP3</title>
-    <meta name="description" content="Baixe e converta vídeos e áudios que você possui ou tem autorização para utilizar. Processamento em segundo plano de alta velocidade, seguro e com exclusão automática.">
+    <title id="pageTitle"><?= htmlspecialchars(t('page_title')) ?></title>
+    <meta name="description" id="metaDesc" content="<?= htmlspecialchars(t('meta_desc')) ?>">
     <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
     <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -49,7 +52,7 @@
 
         /* Navbar */
         .navbar {
-            padding: 1.25rem 2rem;
+            padding: 1.1rem 2rem;
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -70,8 +73,8 @@
         }
 
         .nav-logo {
-            width: 44px;
-            height: 44px;
+            width: 42px;
+            height: 42px;
             border-radius: 12px;
             box-shadow: 0 4px 15px rgba(0, 102, 255, 0.35);
         }
@@ -85,16 +88,22 @@
             -webkit-text-fill-color: transparent;
         }
 
+        .nav-right-wrap {
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
+        }
+
         .nav-links {
             display: flex;
             align-items: center;
-            gap: 1.5rem;
+            gap: 1.25rem;
         }
 
         .nav-link {
             color: var(--text-muted);
             text-decoration: none;
-            font-size: 0.9rem;
+            font-size: 0.88rem;
             font-weight: 600;
             transition: all 0.2s ease;
         }
@@ -107,18 +116,56 @@
             background: rgba(255, 51, 75, 0.15);
             color: #ff6b7d;
             border: 1px solid rgba(255, 51, 75, 0.3);
-            padding: 0.5rem 1rem;
+            padding: 0.45rem 0.9rem;
             border-radius: 9999px;
-            font-size: 0.85rem;
+            font-size: 0.82rem;
             font-weight: 700;
             text-decoration: none;
             transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
         }
 
         .nav-btn-report:hover {
             background: rgba(255, 51, 75, 0.25);
             color: #fff;
             border-color: #ff334b;
+        }
+
+        /* Language Switcher */
+        .lang-switcher {
+            display: inline-flex;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 9999px;
+            padding: 3px;
+            gap: 2px;
+        }
+
+        .lang-btn {
+            background: transparent;
+            border: none;
+            color: #94a3b8;
+            font-size: 0.8rem;
+            font-weight: 700;
+            padding: 0.35rem 0.75rem;
+            border-radius: 9999px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+            transition: all 0.2s ease;
+        }
+
+        .lang-btn:hover {
+            color: #fff;
+        }
+
+        .lang-btn.active {
+            background: var(--primary);
+            color: #fff;
+            box-shadow: 0 2px 10px rgba(0, 102, 255, 0.4);
         }
 
         /* Container & Main Card */
@@ -163,6 +210,7 @@
             max-width: 580px;
             margin: 0 auto;
             line-height: 1.6;
+            transition: color 0.2s;
         }
 
         /* Glass Card */
@@ -598,6 +646,12 @@
         }
 
         @media (max-width: 640px) {
+            .navbar {
+                padding: 1rem 1.25rem;
+            }
+            .nav-links {
+                display: none;
+            }
             .options-grid {
                 grid-template-columns: 1fr;
             }
@@ -621,10 +675,23 @@
             <img src="logo.png" alt="Logo BAIXOU!!" class="nav-logo">
             <span class="nav-title">BAIXOU!!</span>
         </a>
-        <div class="nav-links">
-            <a href="termos.php" class="nav-link">Termos</a>
-            <a href="direitos-autorais.php" class="nav-link">Direitos Autorais</a>
-            <a href="denunciar.php" class="nav-btn-report"><i class="fa-solid fa-flag"></i> Denunciar</a>
+        <div class="nav-right-wrap">
+            <div class="nav-links">
+                <a href="termos.php" class="nav-link" data-i18n="nav_terms"><?= htmlspecialchars(t('nav_terms')) ?></a>
+                <a href="direitos-autorais.php" class="nav-link" data-i18n="nav_copyright"><?= htmlspecialchars(t('nav_copyright')) ?></a>
+                <a href="denunciar.php" class="nav-btn-report">
+                    <i class="fa-solid fa-flag"></i> <span data-i18n="nav_report"><?= htmlspecialchars(t('nav_report')) ?></span>
+                </a>
+            </div>
+            <!-- Language Switcher Toggle -->
+            <div class="lang-switcher" id="langSwitcher">
+                <button type="button" class="lang-btn <?= $currentLang === 'pt' ? 'active' : '' ?>" data-lang="pt" title="Português">
+                    <span>🇧🇷</span> PT
+                </button>
+                <button type="button" class="lang-btn <?= $currentLang === 'en' ? 'active' : '' ?>" data-lang="en" title="English">
+                    <span>🇺🇸</span> EN
+                </button>
+            </div>
         </div>
     </nav>
 
@@ -635,7 +702,7 @@
         <header class="app-header">
             <img src="logo.png" alt="BAIXOU!!" class="hero-logo">
             <h1 class="hero-title">BAIXOU!!</h1>
-            <p class="hero-subtitle">Baixe e converta vídeos e áudios autorizados com processamento em alta velocidade e segurança máxima.</p>
+            <p class="hero-subtitle" data-i18n="hero_subtitle"><?= htmlspecialchars(t('hero_subtitle')) ?></p>
         </header>
 
         <!-- Supported Platforms -->
@@ -654,12 +721,12 @@
             <form id="convertForm">
                 <!-- URL Input -->
                 <div class="form-group">
-                    <label class="option-label" for="urlInput">Cole a URL do Vídeo Autorizado</label>
+                    <label class="option-label" for="urlInput" data-i18n="input_label"><?= htmlspecialchars(t('input_label')) ?></label>
                     <div class="input-wrapper">
                         <i class="fa-solid fa-link input-icon"></i>
-                        <input type="url" id="urlInput" class="url-input" placeholder="https://www.youtube.com/watch?v=... ou link do X" required autocomplete="off">
+                        <input type="url" id="urlInput" class="url-input" placeholder="<?= htmlspecialchars(t('input_placeholder')) ?>" data-i18n-placeholder="input_placeholder" required autocomplete="off">
                         <button type="button" class="paste-btn" id="btnPaste">
-                            <i class="fa-regular fa-clipboard"></i> Colar
+                            <i class="fa-regular fa-clipboard"></i> <span data-i18n="btn_paste"><?= htmlspecialchars(t('btn_paste')) ?></span>
                         </button>
                     </div>
                 </div>
@@ -667,19 +734,19 @@
                 <!-- Format and Quality Options -->
                 <div class="options-grid">
                     <div>
-                        <label class="option-label" for="selectFormat">Formato de Saída</label>
+                        <label class="option-label" for="selectFormat" data-i18n="label_format"><?= htmlspecialchars(t('label_format')) ?></label>
                         <select id="selectFormat" class="select-custom">
-                            <option value="mp4" selected>🎬 MP4 (Vídeo com Áudio)</option>
-                            <option value="mp3">🎵 MP3 (Apenas Áudio de Alta Qualidade)</option>
+                            <option value="mp4" selected data-i18n="format_mp4"><?= htmlspecialchars(t('format_mp4')) ?></option>
+                            <option value="mp3" data-i18n="format_mp3"><?= htmlspecialchars(t('format_mp3')) ?></option>
                         </select>
                     </div>
                     <div>
-                        <label class="option-label" for="selectQuality">Resolução / Qualidade</label>
+                        <label class="option-label" for="selectQuality" data-i18n="label_quality"><?= htmlspecialchars(t('label_quality')) ?></label>
                         <select id="selectQuality" class="select-custom">
-                            <option value="auto" selected>🌟 Máxima Resolução (Automático)</option>
-                            <option value="1080p">📺 1080p (Full HD)</option>
-                            <option value="720p">📱 720p (HD)</option>
-                            <option value="480p">⚡ 480p (Rápido / Leve)</option>
+                            <option value="auto" selected data-i18n="quality_auto"><?= htmlspecialchars(t('quality_auto')) ?></option>
+                            <option value="1080p" data-i18n="quality_1080p"><?= htmlspecialchars(t('quality_1080p')) ?></option>
+                            <option value="720p" data-i18n="quality_720p"><?= htmlspecialchars(t('quality_720p')) ?></option>
+                            <option value="480p" data-i18n="quality_480p"><?= htmlspecialchars(t('quality_480p')) ?></option>
                         </select>
                     </div>
                 </div>
@@ -689,20 +756,20 @@
                     <label class="custom-check-item">
                         <input type="checkbox" id="checkRights" required>
                         <span class="check-text">
-                            <strong>Declaração de Direitos:</strong> Confirmo que possuo os direitos autorais, licença de uso ou autorização legítima do titular para baixar e utilizar este conteúdo.
+                            <strong data-i18n="check_rights_title"><?= htmlspecialchars(t('check_rights_title')) ?></strong> <span data-i18n="check_rights_text"><?= htmlspecialchars(t('check_rights_text')) ?></span>
                         </span>
                     </label>
                     <label class="custom-check-item">
                         <input type="checkbox" id="checkTerms" required>
                         <span class="check-text">
-                            Li e aceito expressamente os <a href="termos.php" target="_blank">Termos de Uso</a> e a <a href="direitos-autorais.php" target="_blank">Política de Direitos Autorais</a>.
+                            <span data-i18n="check_terms_prefix"><?= htmlspecialchars(t('check_terms_prefix')) ?></span> <a href="termos.php" target="_blank" data-i18n="terms_link_text"><?= htmlspecialchars(t('terms_link_text')) ?></a> <span data-i18n="check_terms_and"><?= htmlspecialchars(t('check_terms_and')) ?></span> <a href="direitos-autorais.php" target="_blank" data-i18n="copyright_link_text"><?= htmlspecialchars(t('copyright_link_text')) ?></a>.
                         </span>
                     </label>
                 </div>
 
                 <!-- Action Button -->
                 <button type="submit" class="btn-action" id="btnSubmit">
-                    <i class="fa-solid fa-bolt"></i> <span id="btnSubmitText">CONVERTER PARA MP4</span>
+                    <i class="fa-solid fa-bolt"></i> <span id="btnSubmitText"><?= htmlspecialchars(t('btn_convert_prefix')) ?> MP4</span>
                 </button>
             </form>
 
@@ -710,7 +777,7 @@
             <div id="progressCard">
                 <div class="progress-header">
                     <span class="progress-status-badge" id="badgeStatus">
-                        <i class="fa-solid fa-spinner fa-spin"></i> <span id="textStatus">Processando...</span>
+                        <i class="fa-solid fa-spinner fa-spin"></i> <span id="textStatus"><?= htmlspecialchars(t('status_processing')) ?></span>
                     </span>
                     <span id="textPercent" style="font-weight: 800; font-size: 1.1rem; color: #60a5fa;">0%</span>
                 </div>
@@ -723,19 +790,19 @@
                 <div class="progress-steps-list">
                     <div class="step-item active" id="step1">
                         <span class="step-icon"><i class="fa-solid fa-magnifying-glass"></i></span>
-                        <span>1. Analisando URL e consultando metadados...</span>
+                        <span id="stepText1" data-i18n="step_1"><?= htmlspecialchars(t('step_1')) ?></span>
                     </div>
                     <div class="step-item" id="step2">
                         <span class="step-icon"><i class="fa-solid fa-cloud-arrow-down"></i></span>
-                        <span>2. Obtendo conteúdo autorizado da plataforma...</span>
+                        <span id="stepText2" data-i18n="step_2"><?= htmlspecialchars(t('step_2')) ?></span>
                     </div>
                     <div class="step-item" id="step3">
                         <span class="step-icon"><i class="fa-solid fa-gears"></i></span>
-                        <span>3. Processando e sincronizando vídeo e áudio com FFmpeg...</span>
+                        <span id="stepText3" data-i18n="step_3"><?= htmlspecialchars(t('step_3')) ?></span>
                     </div>
                     <div class="step-item" id="step4">
                         <span class="step-icon"><i class="fa-solid fa-circle-check"></i></span>
-                        <span>4. Finalizando arquivo de mídia para entrega...</span>
+                        <span id="stepText4" data-i18n="step_4"><?= htmlspecialchars(t('step_4')) ?></span>
                     </div>
                 </div>
 
@@ -743,7 +810,7 @@
                 <div class="result-preview" id="resultPreview">
                     <img src="" alt="Thumbnail" class="preview-thumb" id="previewThumb">
                     <div class="preview-info">
-                        <div class="preview-title" id="previewTitle">Título do Vídeo</div>
+                        <div class="preview-title" id="previewTitle"><?= htmlspecialchars(t('preview_title_default')) ?></div>
                         <div class="preview-meta">
                             <span><i class="fa-regular fa-clock"></i> <span id="previewDuration">--:--</span></span>
                             <span><i class="fa-regular fa-hard-drive"></i> <span id="previewSize">-- MB</span></span>
@@ -754,19 +821,19 @@
 
                 <!-- Download Ready Button -->
                 <a href="#" id="btnDownload" class="btn-download-ready">
-                    <i class="fa-solid fa-download"></i> BAIXAR ARQUIVO AGORA
+                    <i class="fa-solid fa-download"></i> <span data-i18n="btn_download"><?= htmlspecialchars(t('btn_download')) ?></span>
                 </a>
 
                 <div class="retention-notice" id="retentionNotice" style="display: none;">
                     <i class="fa-solid fa-clock-rotate-left"></i>
-                    <span>Retenção Zero: O arquivo será excluído permanentemente em <strong id="retentionTimer">30:00</strong> por segurança e privacidade.</span>
+                    <span><span data-i18n="retention_prefix"><?= htmlspecialchars(t('retention_prefix')) ?></span> <strong id="retentionTimer">30:00</strong> <span data-i18n="retention_suffix"><?= htmlspecialchars(t('retention_suffix')) ?></span></span>
                 </div>
             </div>
 
             <!-- Error Box -->
             <div class="error-box" id="errorBox">
                 <i class="fa-solid fa-triangle-exclamation" style="font-size: 1.4rem;"></i>
-                <div id="errorText">Não foi possível processar o vídeo.</div>
+                <div id="errorText"><?= htmlspecialchars(t('error_default')) ?></div>
             </div>
         </div>
 
@@ -775,19 +842,89 @@
     <!-- Footer -->
     <footer class="footer">
         <div class="footer-links">
-            <a href="termos.php" class="footer-link">Termos de Uso</a>
-            <a href="direitos-autorais.php" class="footer-link">Direitos Autorais & DMCA</a>
-            <a href="privacidade.php" class="footer-link">Política de Privacidade</a>
-            <a href="denunciar.php" class="footer-link">🚨 Denunciar Conteúdo</a>
-            <a href="admin.php" class="footer-link">Administração</a>
+            <a href="termos.php" class="footer-link" data-i18n="footer_terms"><?= htmlspecialchars(t('footer_terms')) ?></a>
+            <a href="direitos-autorais.php" class="footer-link" data-i18n="footer_copyright"><?= htmlspecialchars(t('footer_copyright')) ?></a>
+            <a href="privacidade.php" class="footer-link" data-i18n="footer_privacy"><?= htmlspecialchars(t('footer_privacy')) ?></a>
+            <a href="denunciar.php" class="footer-link" data-i18n="footer_report"><?= htmlspecialchars(t('footer_report')) ?></a>
+            <a href="admin.php" class="footer-link" data-i18n="footer_admin"><?= htmlspecialchars(t('footer_admin')) ?></a>
         </div>
-        <p class="footer-legal-notice">
-            Aviso de Responsabilidade: O BAIXOU!! fornece tecnologia para conversão e processamento temporário de mídias para uso pessoal de conteúdos próprios ou autorizados pelo titular dos direitos. O serviço não armazena arquivos permanentemente e não apoia a violação de direitos autorais.
+        <p class="footer-legal-notice" data-i18n="footer_disclaimer">
+            <?= htmlspecialchars(t('footer_disclaimer')) ?>
         </p>
     </footer>
 
-    <!-- Frontend Script -->
+    <!-- Frontend Script with Full Bilingual Support -->
     <script>
+        const i18n = <?= json_encode($i18nData, JSON_UNESCAPED_UNICODE) ?>;
+        let currentLang = '<?= $currentLang ?>';
+
+        // Detecção inicial via cliente caso usuário nunca tenha salvo preferência
+        const savedLang = localStorage.getItem('baixou_lang');
+        if (savedLang && (savedLang === 'pt' || savedLang === 'en')) {
+            if (savedLang !== currentLang) {
+                currentLang = savedLang;
+                document.cookie = "baixou_lang=" + savedLang + ";path=/;max-age=31536000";
+            }
+        } else {
+            // Se não houver preferência salva, verifica o navegador: se começar com pt -> pt, senão -> en
+            const browserLang = (navigator.language || navigator.userLanguage || '').toLowerCase();
+            const preferred = browserLang.startsWith('pt') ? 'pt' : 'en';
+            if (preferred !== currentLang) {
+                currentLang = preferred;
+                document.cookie = "baixou_lang=" + preferred + ";path=/;max-age=31536000";
+            }
+        }
+
+        function t(key) {
+            return (i18n[currentLang] && i18n[currentLang][key]) ? i18n[currentLang][key] : (i18n['en'][key] || key);
+        }
+
+        function applyLanguage(lang) {
+            currentLang = lang;
+            localStorage.setItem('baixou_lang', lang);
+            document.cookie = "baixou_lang=" + lang + ";path=/;max-age=31536000";
+            document.documentElement.lang = (lang === 'pt') ? 'pt-BR' : 'en';
+
+            // Atualiza botões do switcher
+            document.querySelectorAll('.lang-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.getAttribute('data-lang') === lang);
+            });
+
+            // Atualiza tags de texto direto
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (i18n[lang] && i18n[lang][key]) {
+                    el.textContent = i18n[lang][key];
+                }
+            });
+
+            // Atualiza placeholders
+            document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+                const key = el.getAttribute('data-i18n-placeholder');
+                if (i18n[lang] && i18n[lang][key]) {
+                    el.placeholder = i18n[lang][key];
+                }
+            });
+
+            // Atualiza Título e Meta Desc
+            document.getElementById('pageTitle').textContent = t('page_title');
+            document.getElementById('metaDesc').content = t('meta_desc');
+
+            // Atualiza texto dinâmico do botão Converter
+            updateSubmitButtonText();
+        }
+
+        // Listener dos botões de idioma
+        document.querySelectorAll('.lang-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const selected = btn.getAttribute('data-lang');
+                if (selected !== currentLang) {
+                    applyLanguage(selected);
+                }
+            });
+        });
+
+        // Formulário e Processamento
         const form = document.getElementById('convertForm');
         const urlInput = document.getElementById('urlInput');
         const selectFormat = document.getElementById('selectFormat');
@@ -825,13 +962,14 @@
         let pollInterval = null;
         let countdownInterval = null;
 
-        // Atualizar texto do botão dinamicamente
-        selectFormat.addEventListener('change', () => {
+        function updateSubmitButtonText() {
             const fmt = selectFormat.value.toUpperCase();
-            btnSubmitText.textContent = `CONVERTER PARA ${fmt}`;
-        });
+            btnSubmitText.textContent = `${t('btn_convert_prefix')} ${fmt}`;
+        }
 
-        // Botão Colar da Área de Transferência
+        selectFormat.addEventListener('change', updateSubmitButtonText);
+
+        // Botão Colar
         btnPaste.addEventListener('click', async () => {
             try {
                 const text = await navigator.clipboard.readText();
@@ -849,14 +987,13 @@
             e.preventDefault();
 
             if (!checkRights.checked || !checkTerms.checked) {
-                alert('Você precisa confirmar a declaração de direitos e aceitar os termos.');
+                alert(t('error_check_boxes'));
                 return;
             }
 
             const url = urlInput.value.trim();
             if (!url) return;
 
-            // Resetar UI
             errorBox.style.display = 'none';
             resultPreview.style.display = 'none';
             btnDownload.style.display = 'none';
@@ -864,10 +1001,10 @@
             if (countdownInterval) clearInterval(countdownInterval);
 
             btnSubmit.disabled = true;
-            btnSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Criando Tarefa...';
+            btnSubmit.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> ${t('btn_creating_job')}`;
 
             progressCard.style.display = 'block';
-            updateSteps(1, 10, 'Iniciando...');
+            updateSteps(1, 10, t('step_1'));
 
             try {
                 const formData = new FormData();
@@ -885,7 +1022,7 @@
                 const data = await res.json();
 
                 if (!data.success) {
-                    showError(data.error || 'Erro ao registrar solicitação.');
+                    showError(data.error || t('error_default'));
                     return;
                 }
 
@@ -893,7 +1030,7 @@
                 startPolling(activeJobId);
 
             } catch (err) {
-                showError('Erro de conexão com o servidor. Verifique sua rede e tente novamente.');
+                showError(t('error_network'));
             }
         });
 
@@ -907,32 +1044,32 @@
 
                     if (!data.success) {
                         clearInterval(pollInterval);
-                        showError(data.error || 'Falha ao consultar progresso.');
+                        showError(data.error || t('error_default'));
                         return;
                     }
 
                     const job = data.job;
 
-                    btnSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processando Mídia...';
+                    btnSubmit.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> ${t('btn_processing')}`;
 
                     if (job.status === 'pending') {
-                        updateSteps(1, 10, job.step || 'Aguardando na fila de processamento...');
+                        updateSteps(1, 10, t('step_1'));
                     } else if (job.status === 'analyzing') {
-                        updateSteps(1, job.progress || 20, job.step);
+                        updateSteps(1, job.progress || 20, t('step_1'));
                     } else if (job.status === 'downloading') {
-                        updateSteps(2, job.progress || 40, job.step);
+                        updateSteps(2, job.progress || 40, t('step_2'));
                     } else if (job.status === 'processing') {
-                        updateSteps(3, job.progress || 75, job.step);
+                        updateSteps(3, job.progress || 75, t('step_3'));
                     } else if (job.status === 'completed') {
                         clearInterval(pollInterval);
-                        updateSteps(4, 100, 'Conversão concluída!');
+                        updateSteps(4, 100, t('status_completed'));
                         showCompleted(job);
                     } else if (job.status === 'error') {
                         clearInterval(pollInterval);
-                        showError(job.error_message || 'Erro durante a conversão.');
+                        showError(job.error_message || t('error_default'));
                     }
                 } catch (e) {
-                    // Ignora falhas pontuais de rede no polling
+                    // Ignora falha de rede temporária
                 }
             }, 1800);
         }
@@ -958,13 +1095,12 @@
         function showCompleted(job) {
             btnSubmit.disabled = false;
             const fmt = selectFormat.value.toUpperCase();
-            btnSubmitText.textContent = `CONVERTER PARA ${fmt}`;
-            btnSubmit.innerHTML = `<i class="fa-solid fa-bolt"></i> <span>CONVERTER PARA ${fmt}</span>`;
+            btnSubmit.innerHTML = `<i class="fa-solid fa-bolt"></i> <span>${t('btn_convert_prefix')} ${fmt}</span>`;
 
             badgeStatus.style.background = 'rgba(16, 185, 129, 0.2)';
             badgeStatus.style.borderColor = 'rgba(16, 185, 129, 0.4)';
             badgeStatus.style.color = '#34d399';
-            badgeStatus.innerHTML = '<i class="fa-solid fa-check"></i> Concluído com sucesso!';
+            badgeStatus.innerHTML = `<i class="fa-solid fa-check"></i> ${t('status_completed')}`;
 
             if (job.thumbnail) {
                 previewThumb.src = job.thumbnail;
@@ -973,9 +1109,9 @@
                 previewThumb.style.display = 'none';
             }
 
-            previewTitle.textContent = job.title || 'Mídia Pronta';
+            previewTitle.textContent = job.title || t('preview_title_default');
             previewDuration.textContent = job.duration || '--:--';
-            previewSize.textContent = job.file_size_formatted || 'Pronto';
+            previewSize.textContent = job.file_size_formatted || t('preview_ready');
             previewFormat.textContent = job.format;
 
             resultPreview.style.display = 'flex';
@@ -983,13 +1119,12 @@
             btnDownload.style.display = 'block';
             retentionNotice.style.display = 'flex';
 
-            // Contador regressivo de 30 minutos
             let remainingSec = job.expires_in || 1800;
             countdownInterval = setInterval(() => {
                 remainingSec--;
                 if (remainingSec <= 0) {
                     clearInterval(countdownInterval);
-                    retentionTimer.textContent = 'Expirado';
+                    retentionTimer.textContent = t('retention_expired');
                     btnDownload.style.display = 'none';
                 } else {
                     const m = Math.floor(remainingSec / 60);
@@ -1002,12 +1137,15 @@
         function showError(msg) {
             btnSubmit.disabled = false;
             const fmt = selectFormat.value.toUpperCase();
-            btnSubmit.innerHTML = `<i class="fa-solid fa-bolt"></i> <span>CONVERTER PARA ${fmt}</span>`;
+            btnSubmit.innerHTML = `<i class="fa-solid fa-bolt"></i> <span>${t('btn_convert_prefix')} ${fmt}</span>`;
 
             progressCard.style.display = 'none';
             errorBox.style.display = 'flex';
             errorText.textContent = msg;
         }
+
+        // Aplica o idioma detectado
+        applyLanguage(currentLang);
     </script>
 </body>
 </html>
