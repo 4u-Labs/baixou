@@ -73,15 +73,29 @@ $url = $job['url'];
 $format = $job['format'] ?? 'mp4';
 $quality = $job['quality'] ?? 'auto';
 
+$isYouTube = (stripos($url, 'youtube.com') !== false || stripos($url, 'youtu.be') !== false);
+$proxyOpt = '';
+
+// Se for YouTube e houver proxy/túnel residencial ativo (porta 10800), roteia tráfego para contornar bloqueio de ASN de Datacenter
+if ($isYouTube) {
+    $fp = @fsockopen('127.0.0.1', 10800, $errno, $errstr, 0.3);
+    if ($fp) {
+        fclose($fp);
+        $proxyOpt = ' --proxy "socks5://127.0.0.1:10800"';
+    }
+}
+
 $cookiesFile = __DIR__ . '/storage/data/cookies.txt';
-$cookiesOpt = (file_exists($cookiesFile) && filesize($cookiesFile) > 10) ? ' --cookies ' . escapeshellarg($cookiesFile) : '';
+// Não passar cookies para o YouTube caso use proxy residencial (evita conflito de sessão/rotação)
+$cookiesOpt = (file_exists($cookiesFile) && filesize($cookiesFile) > 10 && !$isYouTube) ? ' --cookies ' . escapeshellarg($cookiesFile) : '';
 
 // Obter metadados via yt-dlp dump-json
 $cmdInfo = sprintf(
-    'PATH=%s:$PATH %s --dump-json --no-warnings --no-playlist%s --remote-components ejs:github --extractor-args "youtube:player_client=android,web" %s 2>&1',
+    'PATH=%s:$PATH %s --dump-json --no-warnings --no-playlist%s%s --remote-components ejs:github --extractor-args "youtube:player_client=android,web" %s 2>&1',
     escapeshellarg($ffmpegDir),
     escapeshellarg($binYtDlp),
     $cookiesOpt,
+    $proxyOpt,
     escapeshellarg($url)
 );
 
@@ -125,11 +139,12 @@ $outPattern = "$jobDir/media.%(ext)s";
 // Montar comando de download e conversão
 if ($format === 'mp3') {
     $dlCmd = sprintf(
-        'PATH=%s:$PATH %s -x --audio-format mp3 --audio-quality 0 --ffmpeg-location %s --no-playlist%s --remote-components ejs:github --extractor-args "youtube:player_client=android,web" -o %s %s 2>&1',
+        'PATH=%s:$PATH %s -x --audio-format mp3 --audio-quality 0 --ffmpeg-location %s --no-playlist%s%s --remote-components ejs:github --extractor-args "youtube:player_client=android,web" -o %s %s 2>&1',
         escapeshellarg($ffmpegDir),
         escapeshellarg($binYtDlp),
         escapeshellarg($binFfmpeg),
         $cookiesOpt,
+        $proxyOpt,
         escapeshellarg($outPattern),
         escapeshellarg($url)
     );
@@ -146,12 +161,13 @@ if ($format === 'mp3') {
     }
 
     $dlCmd = sprintf(
-        'PATH=%s:$PATH %s -f %s --merge-output-format mp4 --ffmpeg-location %s --no-playlist%s --remote-components ejs:github --extractor-args "youtube:player_client=android,web" -o %s %s 2>&1',
+        'PATH=%s:$PATH %s -f %s --merge-output-format mp4 --ffmpeg-location %s --no-playlist%s%s --remote-components ejs:github --extractor-args "youtube:player_client=android,web" -o %s %s 2>&1',
         escapeshellarg($ffmpegDir),
         escapeshellarg($binYtDlp),
         escapeshellarg($formatSelector),
         escapeshellarg($binFfmpeg),
         $cookiesOpt,
+        $proxyOpt,
         escapeshellarg($outPattern),
         escapeshellarg($url)
     );
@@ -196,7 +212,7 @@ if ($finalFile && file_exists($finalFile)) {
     // Erro ao processar
     $errorMsg = 'Não foi possível baixar ou converter este conteúdo. A fonte pode exigir autenticação, estar indisponível ou possuir restrições de acesso.';
     if (strpos($outputResult ?? '', 'Sign in to confirm you’re not a bot') !== false) {
-        $errorMsg = 'Esta plataforma exigiu verificação de robô no momento. Tente novamente em instantes ou utilize outra fonte autorizada.';
+        $errorMsg = 'O YouTube exigiu verificação de robô devido ao IP do servidor em nuvem. Utilize a versão local do BAIXOU (http://localhost:8000/app/baixou/) ou mantenha seu aplicativo local conectado.';
     } elseif (strpos($outputResult ?? '', 'Private video') !== false) {
         $errorMsg = 'O vídeo é privado ou requer permissões especiais de acesso.';
     }
