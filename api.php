@@ -87,10 +87,10 @@ if ($action === 'create_job') {
     }
 
     // Formatos válidos
-    if (!in_array($format, ['mp4', 'mp3'], true)) {
+    if (!in_array($format, ['mp4', 'mp3', 'txt', 'md', 'srt'], true)) {
         $format = 'mp4';
     }
-    if (!in_array($quality, ['auto', '1080p', '720p', '480p', '360p'], true)) {
+    if (!in_array($quality, ['auto', '1080p', '720p', '480p', '360p', 'pt', 'en', 'es'], true)) {
         $quality = 'auto';
     }
 
@@ -149,7 +149,7 @@ if ($action === 'status') {
     }
 
     $db = getDB();
-    $stmt = $db->prepare("SELECT id, url, format, quality, status, step, progress, title, thumbnail, duration, file_size, error_message, created_at, expires_at FROM jobs WHERE id = :id");
+    $stmt = $db->prepare("SELECT id, url, format, quality, status, step, progress, title, thumbnail, duration, file_path, file_size, error_message, created_at, expires_at FROM jobs WHERE id = :id");
     $stmt->execute([':id' => $jobId]);
     $job = $stmt->fetch();
 
@@ -160,6 +160,12 @@ if ($action === 'status') {
 
     $isReady = ($job['status'] === 'completed');
     $downloadUrl = $isReady ? "api.php?action=download&job_id={$job['id']}" : null;
+
+    $transcriptContent = null;
+    if ($isReady && in_array(strtolower($job['format']), ['txt', 'md', 'srt'], true) && !empty($job['file_path']) && file_exists($job['file_path'])) {
+        // Retornar conteúdo da transcrição diretamente para exibição e cópia na interface
+        $transcriptContent = file_get_contents($job['file_path']);
+    }
 
     echo json_encode([
         'success' => true,
@@ -173,7 +179,8 @@ if ($action === 'status') {
             'duration' => $job['duration'] ?: '--:--',
             'format' => strtoupper($job['format']),
             'file_size' => (int)$job['file_size'],
-            'file_size_formatted' => $job['file_size'] > 0 ? round($job['file_size'] / (1024 * 1024), 2) . ' MB' : '',
+            'file_size_formatted' => $job['file_size'] > 0 ? ($job['file_size'] < 1048576 ? round($job['file_size'] / 1024, 1) . ' KB' : round($job['file_size'] / (1024 * 1024), 2) . ' MB') : '',
+            'transcript_content' => $transcriptContent,
             'error_message' => $job['error_message'],
             'download_url' => $downloadUrl,
             'expires_in' => $job['expires_at'] ? max(0, $job['expires_at'] - time()) : null
@@ -216,7 +223,16 @@ if ($action === 'download') {
     }
     $filename = $safeTitle . '.' . $ext;
 
-    $mime = $job['mime_type'] ?: ($ext === 'mp3' ? 'audio/mpeg' : 'video/mp4');
+    $mime = $job['mime_type'];
+    if (empty($mime)) {
+        $mime = match($ext) {
+            'mp3' => 'audio/mpeg',
+            'txt' => 'text/plain; charset=utf-8',
+            'md' => 'text/markdown; charset=utf-8',
+            'srt' => 'text/plain; charset=utf-8',
+            default => 'video/mp4'
+        };
+    }
 
     // Desativar limites de tempo para downloads pesados (ex: podcasts de 4h / gigabytes)
     @set_time_limit(0);

@@ -738,10 +738,13 @@ require_once __DIR__ . '/i18n.php';
                         <select id="selectFormat" class="select-custom">
                             <option value="mp4" selected data-i18n="format_mp4"><?= htmlspecialchars(t('format_mp4')) ?></option>
                             <option value="mp3" data-i18n="format_mp3"><?= htmlspecialchars(t('format_mp3')) ?></option>
+                            <option value="txt" data-i18n="format_txt"><?= htmlspecialchars(t('format_txt')) ?></option>
+                            <option value="md" data-i18n="format_md"><?= htmlspecialchars(t('format_md')) ?></option>
+                            <option value="srt" data-i18n="format_srt"><?= htmlspecialchars(t('format_srt')) ?></option>
                         </select>
                     </div>
                     <div>
-                        <label class="option-label" for="selectQuality" data-i18n="label_quality"><?= htmlspecialchars(t('label_quality')) ?></label>
+                        <label class="option-label" id="labelQuality" for="selectQuality" data-i18n="label_quality"><?= htmlspecialchars(t('label_quality')) ?></label>
                         <select id="selectQuality" class="select-custom">
                             <option value="auto" selected data-i18n="quality_auto"><?= htmlspecialchars(t('quality_auto')) ?></option>
                             <option value="1080p" data-i18n="quality_1080p"><?= htmlspecialchars(t('quality_1080p')) ?></option>
@@ -824,6 +827,31 @@ require_once __DIR__ . '/i18n.php';
                 <a href="#" id="btnDownload" class="btn-download-ready">
                     <i class="fa-solid fa-download"></i> <span data-i18n="btn_download"><?= htmlspecialchars(t('btn_download')) ?></span>
                 </a>
+
+                <!-- Transcript Actions & Viewer (When Format is TXT, MD or SRT) -->
+                <div id="transcriptActionsBox" style="display: none; margin-top: 1rem;">
+                    <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                        <button type="button" id="btnCopyTranscript" style="flex: 1; min-width: 180px; background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.5); color: #93c5fd; padding: 0.95rem 1.25rem; border-radius: 14px; font-weight: 700; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                            <i class="fa-solid fa-copy"></i> <span id="copyBtnText" data-i18n="btn_copy_transcript"><?= htmlspecialchars(t('btn_copy_transcript')) ?></span>
+                        </button>
+                        <button type="button" id="btnToggleViewer" style="flex: 1; min-width: 180px; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.15); color: #e2e8f0; padding: 0.95rem 1.25rem; border-radius: 14px; font-weight: 700; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                            <i class="fa-solid fa-align-left"></i> <span data-i18n="btn_view_transcript"><?= htmlspecialchars(t('btn_view_transcript')) ?></span>
+                        </button>
+                    </div>
+
+                    <!-- Scrollable Transcript Viewer with Search -->
+                    <div id="transcriptViewerCard" style="display: none; margin-top: 1.25rem; background: rgba(15, 23, 42, 0.9); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 18px; padding: 1.25rem; text-align: left; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.85rem; gap: 0.5rem; flex-wrap: wrap;">
+                            <div style="position: relative; flex: 1; min-width: 220px;">
+                                <i class="fa-solid fa-search" style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 0.85rem;"></i>
+                                <input type="text" id="searchTranscriptInput" placeholder="<?= htmlspecialchars(t('search_transcript_placeholder')) ?>" style="width: 100%; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.15); border-radius: 12px; padding: 0.65rem 0.85rem 0.65rem 2.4rem; color: #fff; font-size: 0.88rem; outline: none;">
+                            </div>
+                            <span id="transcriptStatsBadge" style="font-size: 0.8rem; color: #94a3b8; background: rgba(255,255,255,0.06); padding: 0.4rem 0.85rem; border-radius: 10px; font-weight: 600;">--</span>
+                        </div>
+                        <div id="transcriptTextContainer" style="max-height: 420px; overflow-y: auto; line-height: 1.75; font-size: 0.92rem; color: #cbd5e1; white-space: pre-wrap; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding-right: 0.5rem; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 0.85rem;">
+                        </div>
+                    </div>
+                </div>
 
                 <div class="retention-notice" id="retentionNotice" style="display: none;">
                     <i class="fa-solid fa-clock-rotate-left"></i>
@@ -911,8 +939,10 @@ require_once __DIR__ . '/i18n.php';
             document.getElementById('pageTitle').textContent = t('page_title');
             document.getElementById('metaDesc').content = t('meta_desc');
 
-            // Atualiza texto dinâmico do botão Converter
-            updateSubmitButtonText();
+            // Atualiza opções dinâmicas de formato e texto do botão
+            if (typeof updateFormatUI === 'function') {
+                updateFormatUI();
+            }
         }
 
         // Listener dos botões de idioma
@@ -959,16 +989,57 @@ require_once __DIR__ . '/i18n.php';
         const retentionNotice = document.getElementById('retentionNotice');
         const retentionTimer = document.getElementById('retentionTimer');
 
+        const labelQuality = document.getElementById('labelQuality');
+        const transcriptActionsBox = document.getElementById('transcriptActionsBox');
+        const btnCopyTranscript = document.getElementById('btnCopyTranscript');
+        const copyBtnText = document.getElementById('copyBtnText');
+        const btnToggleViewer = document.getElementById('btnToggleViewer');
+        const transcriptViewerCard = document.getElementById('transcriptViewerCard');
+        const searchTranscriptInput = document.getElementById('searchTranscriptInput');
+        const transcriptTextContainer = document.getElementById('transcriptTextContainer');
+        const transcriptStatsBadge = document.getElementById('transcriptStatsBadge');
+
         let activeJobId = null;
         let pollInterval = null;
         let countdownInterval = null;
+        let currentTranscriptText = '';
 
-        function updateSubmitButtonText() {
-            const fmt = selectFormat.value.toUpperCase();
-            btnSubmitText.textContent = `${t('btn_convert_prefix')} ${fmt}`;
+        const qualityOptionsVideo = [
+            { val: 'auto', textKey: 'quality_auto' },
+            { val: '1080p', textKey: 'quality_1080p' },
+            { val: '720p', textKey: 'quality_720p' },
+            { val: '480p', textKey: 'quality_480p' },
+            { val: '360p', textKey: 'quality_360p' }
+        ];
+
+        const qualityOptionsTranscript = [
+            { val: 'auto', textKey: 'lang_auto' },
+            { val: 'pt', textKey: 'lang_pt' },
+            { val: 'en', textKey: 'lang_en' },
+            { val: 'es', textKey: 'lang_es' }
+        ];
+
+        function updateFormatUI() {
+            const fmt = selectFormat.value;
+            const isTx = ['txt', 'md', 'srt'].includes(fmt);
+            const savedVal = selectQuality.value;
+
+            if (isTx) {
+                if (labelQuality) labelQuality.textContent = t('label_quality_transcript');
+                selectQuality.innerHTML = qualityOptionsTranscript.map(o =>
+                    `<option value="${o.val}" ${o.val === savedVal ? 'selected' : ''}>${t(o.textKey)}</option>`
+                ).join('');
+                btnSubmitText.textContent = `${t('btn_extract_prefix')} ${fmt.toUpperCase()}`;
+            } else {
+                if (labelQuality) labelQuality.textContent = t('label_quality_video');
+                selectQuality.innerHTML = qualityOptionsVideo.map(o =>
+                    `<option value="${o.val}" ${(o.val === savedVal || (!savedVal && o.val === 'auto')) ? 'selected' : ''}>${t(o.textKey)}</option>`
+                ).join('');
+                btnSubmitText.textContent = `${t('btn_convert_prefix')} ${fmt.toUpperCase()}`;
+            }
         }
 
-        selectFormat.addEventListener('change', updateSubmitButtonText);
+        selectFormat.addEventListener('change', updateFormatUI);
 
         // Botão Colar
         btnPaste.addEventListener('click', async () => {
@@ -999,6 +1070,9 @@ require_once __DIR__ . '/i18n.php';
             resultPreview.style.display = 'none';
             btnDownload.style.display = 'none';
             retentionNotice.style.display = 'none';
+            transcriptActionsBox.style.display = 'none';
+            transcriptViewerCard.style.display = 'none';
+            currentTranscriptText = '';
             if (countdownInterval) clearInterval(countdownInterval);
 
             btnSubmit.disabled = true;
@@ -1120,6 +1194,18 @@ require_once __DIR__ . '/i18n.php';
             btnDownload.style.display = 'block';
             retentionNotice.style.display = 'flex';
 
+            const isTx = ['TXT', 'MD', 'SRT'].includes(job.format);
+            if (isTx && job.transcript_content) {
+                currentTranscriptText = job.transcript_content;
+                transcriptActionsBox.style.display = 'block';
+                btnDownload.innerHTML = `<i class="fa-solid fa-download"></i> <span>${t('btn_download')} (.${job.format.toLowerCase()})</span>`;
+                renderTranscript(currentTranscriptText);
+            } else {
+                transcriptActionsBox.style.display = 'none';
+                transcriptViewerCard.style.display = 'none';
+                btnDownload.innerHTML = `<i class="fa-solid fa-download"></i> <span>${t('btn_download')}</span>`;
+            }
+
             let remainingSec = job.expires_in || 1800;
             countdownInterval = setInterval(() => {
                 remainingSec--;
@@ -1134,6 +1220,58 @@ require_once __DIR__ . '/i18n.php';
                 }
             }, 1000);
         }
+
+        // Funções da Transcrição (Copiar, Visualizar e Buscar)
+        btnCopyTranscript.addEventListener('click', async () => {
+            if (!currentTranscriptText) return;
+            try {
+                await navigator.clipboard.writeText(currentTranscriptText);
+                copyBtnText.textContent = t('btn_copied');
+                btnCopyTranscript.style.background = 'rgba(16, 185, 129, 0.3)';
+                btnCopyTranscript.style.borderColor = '#10b981';
+                btnCopyTranscript.style.color = '#34d399';
+                setTimeout(() => {
+                    copyBtnText.textContent = t('btn_copy_transcript');
+                    btnCopyTranscript.style.background = 'rgba(59, 130, 246, 0.2)';
+                    btnCopyTranscript.style.borderColor = 'rgba(59, 130, 246, 0.5)';
+                    btnCopyTranscript.style.color = '#93c5fd';
+                }, 2500);
+            } catch (err) {
+                alert('Erro ao copiar');
+            }
+        });
+
+        btnToggleViewer.addEventListener('click', () => {
+            const isHidden = (transcriptViewerCard.style.display === 'none' || !transcriptViewerCard.style.display);
+            transcriptViewerCard.style.display = isHidden ? 'block' : 'none';
+            if (isHidden) {
+                transcriptViewerCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        });
+
+        function renderTranscript(text, filter = '') {
+            if (!text) {
+                transcriptTextContainer.textContent = t('no_transcript_found');
+                transcriptStatsBadge.textContent = '--';
+                return;
+            }
+            const words = text.trim().split(/\s+/).length;
+            const kb = (text.length / 1024).toFixed(1);
+            transcriptStatsBadge.textContent = `${words.toLocaleString()} palavras • ${kb} KB`;
+
+            if (!filter) {
+                transcriptTextContainer.textContent = text;
+                return;
+            }
+
+            const lines = text.split('\n');
+            const filtered = lines.filter(l => l.toLowerCase().includes(filter.toLowerCase()));
+            transcriptTextContainer.textContent = filtered.length > 0 ? filtered.join('\n') : 'Nenhum trecho encontrado para a busca.';
+        }
+
+        searchTranscriptInput.addEventListener('input', (e) => {
+            renderTranscript(currentTranscriptText, e.target.value.trim());
+        });
 
         function showError(msg) {
             btnSubmit.disabled = false;
