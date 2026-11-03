@@ -90,6 +90,9 @@ if ($action === 'create_job') {
     if (!in_array($format, ['mp4', 'mp3'], true)) {
         $format = 'mp4';
     }
+    if (!in_array($quality, ['auto', '1080p', '720p', '480p', '360p'], true)) {
+        $quality = 'auto';
+    }
 
     $ipAddress = $_SERVER['HTTP_CF_CONNECTING_IP'] ?? $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
     $userAgent = substr($_SERVER['HTTP_USER_AGENT'] ?? 'Unknown', 0, 255);
@@ -179,7 +182,7 @@ if ($action === 'status') {
     exit;
 }
 
-// 3. Download do Arquivo Gerado (Com stream de alta velocidade)
+// 3. Download do Arquivo Gerado (Stream de alta velocidade, chunked, sem limite de tempo e com suporte a Range)
 if ($action === 'download') {
     $jobId = trim($_GET['job_id'] ?? '');
     if (empty($jobId)) {
@@ -204,24 +207,89 @@ if ($action === 'download') {
     }
 
     $filePath = $job['file_path'];
+    $fileSize = filesize($filePath);
     $ext = pathinfo($filePath, PATHINFO_EXTENSION);
     $safeTitle = preg_replace('/[^\p{L}\p{N}\s\-_.]/u', '', $job['title'] ?: 'midia_baixou');
     $safeTitle = trim(preg_replace('/\s+/', ' ', $safeTitle));
+    if (empty($safeTitle)) {
+        $safeTitle = 'midia_baixou';
+    }
     $filename = $safeTitle . '.' . $ext;
 
     $mime = $job['mime_type'] ?: ($ext === 'mp3' ? 'audio/mpeg' : 'video/mp4');
 
+    // Desativar limites de tempo para downloads pesados (ex: podcasts de 4h / gigabytes)
+    @set_time_limit(0);
+    @ini_set('max_execution_time', '0');
+    @ini_set('memory_limit', '512M');
+    ignore_user_abort(true);
+
+    // Suporte a HTTP Range (para downloads pausáveis / gerenciadores / reconexão)
+    $start = 0;
+    $end = $fileSize - 1;
+    $isRange = false;
+
+    if (isset($_SERVER['HTTP_RANGE'])) {
+        if (preg_match('/bytes=\h*(\d+)-(\d*)[\D.*]?/i', $_SERVER['HTTP_RANGE'], $matches)) {
+            $start = intval($matches[1]);
+            if (!empty($matches[2])) {
+                $end = intval($matches[2]);
+            }
+            if ($start > $end || $start >= $fileSize) {
+                header('HTTP/1.1 416 Requested Range Not Satisfiable');
+                header("Content-Range: bytes */$fileSize");
+                exit;
+            }
+            $isRange = true;
+        }
+    }
+
+    $length = $end - $start + 1;
+
+    // Limpar buffers ativos para liberar memória
+    while (ob_get_level() > 0) {
+        ob_end_clean();
+    }
+
+    // Headers de transferência otimizados (X-Accel-Buffering: no para streaming direto no Nginx)
+    header('X-Accel-Buffering: no');
     header('Content-Description: File Transfer');
     header('Content-Type: ' . $mime);
     header('Content-Disposition: attachment; filename="' . rawurlencode($filename) . '"; filename*=UTF-8\'\'' . rawurlencode($filename));
+    header('Accept-Ranges: bytes');
     header('Expires: 0');
-    header('Cache-Control: must-revalidate');
+    header('Cache-Control: public, must-revalidate, max-age=0');
     header('Pragma: public');
-    header('Content-Length: ' . filesize($filePath));
 
-    ob_clean();
-    flush();
-    readfile($filePath);
+    if ($isRange) {
+        header('HTTP/1.1 206 Partial Content');
+        header("Content-Range: bytes $start-$end/$fileSize");
+    } else {
+        header('HTTP/1.1 200 OK');
+    }
+    header('Content-Length: ' . $length);
+
+    $fp = fopen($filePath, 'rb');
+    if ($fp === false) {
+        exit;
+    }
+
+    if ($start > 0) {
+        fseek($fp, $start);
+    }
+
+    $chunkSize = 1024 * 1024; // 1 MB por bloco
+    $bytesRemaining = $length;
+
+    while (!feof($fp) && $bytesRemaining > 0 && connection_status() === CONNECTION_NORMAL) {
+        $readAmount = ($bytesRemaining > $chunkSize) ? $chunkSize : $bytesRemaining;
+        $buffer = fread($fp, $readAmount);
+        echo $buffer;
+        flush();
+        $bytesRemaining -= strlen($buffer);
+    }
+
+    fclose($fp);
     exit;
 }
 

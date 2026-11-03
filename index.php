@@ -747,6 +747,7 @@ require_once __DIR__ . '/i18n.php';
                             <option value="1080p" data-i18n="quality_1080p"><?= htmlspecialchars(t('quality_1080p')) ?></option>
                             <option value="720p" data-i18n="quality_720p"><?= htmlspecialchars(t('quality_720p')) ?></option>
                             <option value="480p" data-i18n="quality_480p"><?= htmlspecialchars(t('quality_480p')) ?></option>
+                            <option value="360p" data-i18n="quality_360p"><?= htmlspecialchars(t('quality_360p')) ?></option>
                         </select>
                     </div>
                 </div>

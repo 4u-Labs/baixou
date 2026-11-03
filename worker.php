@@ -2,6 +2,12 @@
 // Worker de processamento em segundo plano para o BAIXOU!!
 // Executa de forma desacoplada do servidor web para não travar o HTTP
 
+// Desativar qualquer limite de tempo de execução para downloads gigantescos
+@set_time_limit(0);
+@ini_set('max_execution_time', '0');
+@ini_set('memory_limit', '1024M');
+ignore_user_abort(true);
+
 if (php_sapi_name() !== 'cli' && empty($_GET['internal_key'])) {
     http_response_code(403);
     die('Acesso negado.');
@@ -89,9 +95,9 @@ $cookiesFile = __DIR__ . '/storage/data/cookies.txt';
 // Não passar cookies para o YouTube caso use proxy residencial (evita conflito de sessão/rotação)
 $cookiesOpt = (file_exists($cookiesFile) && filesize($cookiesFile) > 10 && !$isYouTube) ? ' --cookies ' . escapeshellarg($cookiesFile) : '';
 
-// Obter metadados via yt-dlp dump-json
+// Obter metadados via yt-dlp dump-json (redirecionando stderr para não poluir JSON)
 $cmdInfo = sprintf(
-    'PATH=%s:$PATH %s --dump-json --no-warnings --no-playlist%s%s --remote-components ejs:github --extractor-args "youtube:player_client=android,web" %s 2>&1',
+    'PATH=%s:$PATH %s --dump-json --no-warnings --no-playlist%s%s %s 2>/dev/null',
     escapeshellarg($ffmpegDir),
     escapeshellarg($binYtDlp),
     $cookiesOpt,
@@ -99,8 +105,17 @@ $cmdInfo = sprintf(
     escapeshellarg($url)
 );
 
-$infoJson = shell_exec($cmdInfo);
-$meta = json_decode($infoJson ?? '', true);
+$infoJson = trim(shell_exec($cmdInfo) ?? '');
+$meta = null;
+
+if (!empty($infoJson)) {
+    $firstBrace = strpos($infoJson, '{');
+    $lastBrace = strrpos($infoJson, '}');
+    if ($firstBrace !== false && $lastBrace !== false) {
+        $cleanJson = substr($infoJson, $firstBrace, $lastBrace - $firstBrace + 1);
+        $meta = json_decode($cleanJson, true);
+    }
+}
 
 $title = 'Vídeo Autorizado';
 $thumb = '';
@@ -127,8 +142,8 @@ updateJob($db, $jobId, [
     'thumbnail' => $thumb,
     'duration' => $durationFormatted,
     'status' => 'downloading',
-    'step' => 'Baixando fluxo de dados autorizado...',
-    'progress' => 35
+    'step' => 'Iniciando download do fluxo de dados autorizado...',
+    'progress' => 25
 ]);
 
 // 2. Preparar pasta de destino
@@ -136,10 +151,10 @@ $jobDir = __DIR__ . "/storage/downloads/$jobId";
 @mkdir($jobDir, 0777, true);
 $outPattern = "$jobDir/media.%(ext)s";
 
-// Montar comando de download e conversão
+// Montar comando de download e conversão com suporte a formatos amplos e merging automático
 if ($format === 'mp3') {
     $dlCmd = sprintf(
-        'PATH=%s:$PATH %s -x --audio-format mp3 --audio-quality 0 --ffmpeg-location %s --no-playlist%s%s --remote-components ejs:github --extractor-args "youtube:player_client=android,web" -o %s %s 2>&1',
+        'PATH=%s:$PATH %s -x --audio-format mp3 --audio-quality 0 --ffmpeg-location %s --no-playlist%s%s --newline --progress-template "%%(progress._percent_str)s|%%(progress._speed_str)s|%%(progress._eta_str)s|%%(progress._total_bytes_estimate_str)s" -o %s %s',
         escapeshellarg($ffmpegDir),
         escapeshellarg($binYtDlp),
         escapeshellarg($binFfmpeg),
@@ -150,18 +165,20 @@ if ($format === 'mp3') {
     );
     $expectedMime = 'audio/mpeg';
 } else {
-    // Formato MP4
-    $formatSelector = 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best';
+    // Formato MP4 com seleção dinâmica de qualidade
+    $formatSelector = 'bestvideo+bestaudio/best';
     if ($quality === '1080p') {
-        $formatSelector = 'bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]/best[height<=1080][ext=mp4]/best';
+        $formatSelector = 'bestvideo[height<=1080]+bestaudio/best[height<=1080]/best';
     } elseif ($quality === '720p') {
-        $formatSelector = 'bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[height<=720][ext=mp4]/best';
+        $formatSelector = 'bestvideo[height<=720]+bestaudio/best[height<=720]/best';
     } elseif ($quality === '480p') {
-        $formatSelector = 'bestvideo[height<=480][ext=mp4]+bestaudio[ext=m4a]/best[height<=480][ext=mp4]/best';
+        $formatSelector = 'bestvideo[height<=480]+bestaudio/best[height<=480]/best';
+    } elseif ($quality === '360p') {
+        $formatSelector = 'bestvideo[height<=360]+bestaudio/best[height<=360]/best';
     }
 
     $dlCmd = sprintf(
-        'PATH=%s:$PATH %s -f %s --merge-output-format mp4 --ffmpeg-location %s --no-playlist%s%s --remote-components ejs:github --extractor-args "youtube:player_client=android,web" -o %s %s 2>&1',
+        'PATH=%s:$PATH %s -f %s --merge-output-format mp4 --ffmpeg-location %s --no-playlist%s%s --newline --progress-template "%%(progress._percent_str)s|%%(progress._speed_str)s|%%(progress._eta_str)s|%%(progress._total_bytes_estimate_str)s" -o %s %s',
         escapeshellarg($ffmpegDir),
         escapeshellarg($binYtDlp),
         escapeshellarg($formatSelector),
@@ -175,12 +192,86 @@ if ($format === 'mp3') {
 }
 
 updateJob($db, $jobId, [
-    'status' => 'processing',
-    'step' => 'Processando e sincronizando áudio e vídeo com FFmpeg...',
-    'progress' => 70
+    'status' => 'downloading',
+    'step' => 'Baixando fluxo de dados...',
+    'progress' => 30
 ]);
 
-$outputResult = shell_exec($dlCmd);
+// Executar via proc_open para atualizar progresso em tempo real na interface
+$descriptors = [
+    0 => ['pipe', 'r'],
+    1 => ['pipe', 'w'],
+    2 => ['pipe', 'w']
+];
+
+$proc = proc_open($dlCmd, $descriptors, $pipes, dirname($jobDir), ['PATH' => "$ffmpegDir:" . getenv('PATH')]);
+$outputResult = '';
+$lastUpdate = time();
+
+if (is_resource($proc)) {
+    fclose($pipes[0]);
+    stream_set_blocking($pipes[1], 0);
+    stream_set_blocking($pipes[2], 0);
+
+    while (true) {
+        $pstatus = proc_get_status($proc);
+        $read = [$pipes[1], $pipes[2]];
+        $write = null;
+        $except = null;
+        $numChanged = @stream_select($read, $write, $except, 0, 200000); // 200ms
+
+        if ($numChanged > 0) {
+            foreach ($read as $r) {
+                while (($line = fgets($r)) !== false) {
+                    $outputResult .= $line;
+
+                    // Exemplo da template: " 45.2%| 12.3MiB/s| 02:15| 1.82GiB"
+                    if (strpos($line, '%|') !== false) {
+                        $parts = explode('|', trim($line));
+                        $pctStr = trim(str_replace('%', '', $parts[0] ?? ''));
+                        $speed = trim($parts[1] ?? '');
+                        $eta = trim($parts[2] ?? '');
+                        $size = trim($parts[3] ?? '');
+
+                        $pctFloat = floatval($pctStr);
+                        if ($pctFloat > 0 && (time() - $lastUpdate >= 1)) {
+                            // Mapeia 0..100% do download para 30..90% da barra global
+                            $globalProgress = 30 + (int)($pctFloat * 0.60);
+                            $stepMsg = "Baixando mídia: " . round($pctFloat, 1) . "%";
+                            if (!empty($speed) && $speed !== 'NA' && $speed !== 'N/A') $stepMsg .= " ($speed)";
+                            if (!empty($eta) && $eta !== 'NA' && $eta !== 'N/A') $stepMsg .= " • Resta: $eta";
+
+                            updateJob($db, $jobId, [
+                                'progress' => min(90, $globalProgress),
+                                'step' => $stepMsg
+                            ]);
+                            $lastUpdate = time();
+                        }
+                    } elseif (stripos($line, '[Merger]') !== false || stripos($line, '[ExtractAudio]') !== false || stripos($line, 'ffmpeg') !== false) {
+                        updateJob($db, $jobId, [
+                            'status' => 'processing',
+                            'progress' => 93,
+                            'step' => 'Sincronizando áudio e vídeo com FFmpeg...'
+                        ]);
+                    }
+                }
+            }
+        }
+
+        if (!$pstatus['running']) {
+            break;
+        }
+    }
+
+    $outputResult .= stream_get_contents($pipes[1]);
+    $outputResult .= stream_get_contents($pipes[2]);
+    fclose($pipes[1]);
+    fclose($pipes[2]);
+    proc_close($proc);
+} else {
+    // Fallback para shell_exec caso proc_open falhe
+    $outputResult = shell_exec($dlCmd . " 2>&1");
+}
 
 // 3. Verificar arquivo final gerado
 $files = glob("$jobDir/media.*");
