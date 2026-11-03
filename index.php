@@ -731,6 +731,19 @@ require_once __DIR__ . '/i18n.php';
                     </div>
                 </div>
 
+                <!-- Mode Quick Tabs (Video / Audio / Transcript) -->
+                <div class="mode-tabs-container" style="display: flex; gap: 0.5rem; margin-bottom: 1.25rem; background: rgba(0,0,0,0.3); padding: 0.35rem; border-radius: 14px; border: 1px solid rgba(255,255,255,0.08);">
+                    <button type="button" class="mode-tab-btn active" data-mode="mp4" style="flex: 1; background: var(--primary); color: #fff; border: none; padding: 0.7rem 0.5rem; border-radius: 10px; font-weight: 700; font-size: 0.88rem; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.4rem;">
+                        <span data-i18n="tab_video"><?= htmlspecialchars(t('tab_video')) ?></span>
+                    </button>
+                    <button type="button" class="mode-tab-btn" data-mode="mp3" style="flex: 1; background: transparent; color: var(--text-muted); border: none; padding: 0.7rem 0.5rem; border-radius: 10px; font-weight: 700; font-size: 0.88rem; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.4rem;">
+                        <span data-i18n="tab_audio"><?= htmlspecialchars(t('tab_audio')) ?></span>
+                    </button>
+                    <button type="button" class="mode-tab-btn" data-mode="txt" style="flex: 1; background: transparent; color: var(--text-muted); border: none; padding: 0.7rem 0.5rem; border-radius: 10px; font-weight: 700; font-size: 0.88rem; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.4rem;">
+                        <span data-i18n="tab_transcript"><?= htmlspecialchars(t('tab_transcript')) ?></span>
+                    </button>
+                </div>
+
                 <!-- Format and Quality Options -->
                 <div class="options-grid">
                     <div>
@@ -1037,7 +1050,34 @@ require_once __DIR__ . '/i18n.php';
                 ).join('');
                 btnSubmitText.textContent = `${t('btn_convert_prefix')} ${fmt.toUpperCase()}`;
             }
+
+            syncModeTabs(fmt);
         }
+
+        function syncModeTabs(fmt) {
+            document.querySelectorAll('.mode-tab-btn').forEach(b => {
+                const m = b.getAttribute('data-mode');
+                const isMatch = (m === fmt) || (m === 'txt' && ['txt', 'md', 'srt'].includes(fmt));
+                if (isMatch) {
+                    b.style.background = 'var(--primary)';
+                    b.style.color = '#fff';
+                    b.classList.add('active');
+                } else {
+                    b.style.background = 'transparent';
+                    b.style.color = 'var(--text-muted)';
+                    b.classList.remove('active');
+                }
+            });
+        }
+
+        // Click nas abas de seleção rápida
+        document.querySelectorAll('.mode-tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const mode = btn.getAttribute('data-mode');
+                selectFormat.value = mode;
+                updateFormatUI();
+            });
+        });
 
         selectFormat.addEventListener('change', updateFormatUI);
 
