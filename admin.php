@@ -40,6 +40,8 @@ if (!$isLoggedIn) {
         button { width: 100%; padding: 1rem; border-radius: 12px; background: #0066ff; color: #fff; border: none; font-weight: 800; cursor: pointer; }
         .error { color: #ff334b; font-size: 0.85rem; margin-top: 0.5rem; }
     </style>
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=20261120-2">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico?v=20261120-2">
 </head>
 <body>
     <div class="card">
@@ -91,9 +93,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 // Estatísticas
 $startOfDay = strtotime('today midnight');
-$totalToday = $db->query("SELECT count(*) FROM jobs WHERE created_at >= $startOfDay")->fetchColumn();
-$successToday = $db->query("SELECT count(*) FROM jobs WHERE created_at >= $startOfDay AND status = 'completed'")->fetchColumn();
-$errorsToday = $db->query("SELECT count(*) FROM jobs WHERE created_at >= $startOfDay AND status = 'error'")->fetchColumn();
+$stTot = $db->prepare("SELECT count(*) FROM jobs WHERE created_at >= ?"); $stTot->execute([(int)$startOfDay]); $totalToday = $stTot->fetchColumn();
+$stSuc = $db->prepare("SELECT count(*) FROM jobs WHERE created_at >= ? AND status = 'completed'"); $stSuc->execute([(int)$startOfDay]); $successToday = $stSuc->fetchColumn();
+$stErr = $db->prepare("SELECT count(*) FROM jobs WHERE created_at >= ? AND status = 'error'"); $stErr->execute([(int)$startOfDay]); $errorsToday = $stErr->fetchColumn();
 $pendingReports = $db->query("SELECT count(*) FROM reports WHERE status = 'pending'")->fetchColumn();
 
 // Tamanho de disco usado

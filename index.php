@@ -8,8 +8,8 @@ require_once __DIR__ . '/i18n.php';
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title id="pageTitle"><?= htmlspecialchars(t('page_title')) ?></title>
     <meta name="description" id="metaDesc" content="<?= htmlspecialchars(t('meta_desc')) ?>">
-    <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=20261120-2">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico?v=20261120-2">
     <link rel="apple-touch-icon" href="apple-touch-icon.png">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0d47a1">
@@ -666,6 +666,10 @@ require_once __DIR__ . '/i18n.php';
             }
         }
     </style>
+
+    <!-- 4u-Labs SEO & Standard Meta -->
+    <link rel="canonical" href="https://4u.ia.br/app/baixou/">
+    <meta property="og:type" content="website"><meta property="og:site_name" content="4u-Labs"><meta property="og:url" content="https://4u.ia.br/app/baixou/"><meta property="og:title" content="Baixou — 4u-Labs"><meta property="og:description" content="&lt;?= htmlspecialchars(t("><meta property="og:image" content="https://4u.ia.br/app/baixou/icon-512.png">
 </head>
 <body>
 
@@ -1326,5 +1330,7 @@ require_once __DIR__ . '/i18n.php';
         // Aplica o idioma detectado
         applyLanguage(currentLang);
     </script>
+
+    <script defer src="/assets/4ulabs-ecosystem.js?v=20261122"></script>
 </body>
 </html>
